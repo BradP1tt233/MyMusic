@@ -1,0 +1,7 @@
+/* Apple Music web font stack — captured from https://music.apple.com/cn */
+:root {
+  --font-apple-music:
+    -apple-system, BlinkMacSystemFont, 'Apple Color Emoji', 'SF Pro', 'SF Pro Icons',
+    'PingFang SC', 'Helvetica Neue', Helvetica, 'Segoe UI', 'Microsoft YaHei UI',
+    'Microsoft YaHei', Arial, sans-serif;
+}

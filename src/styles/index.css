@@ -1,0 +1,78 @@
+@import './fonts.css';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: var(--font-apple-music);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  html {
+    font-family: var(--font-apple-music);
+  }
+
+  body {
+    margin: 0;
+    font-family: inherit;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+}
+
+/* Spotify-like overlay scrollbar — shared by sidebar list & main content */
+.spotify-scrollbar {
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.spotify-scrollbar:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.spotify-scrollbar::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+.spotify-scrollbar:hover::-webkit-scrollbar {
+  width: 12px;
+}
+
+.spotify-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.spotify-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.3);
+  background-clip: padding-box;
+}
+
+.spotify-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.spotify-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.7);
+}

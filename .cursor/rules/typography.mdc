@@ -1,0 +1,13 @@
+---
+description: Apple Music font stack for all project typography
+alwaysApply: true
+---
+
+# Typography — Apple Music
+
+Use the project font stack from `src/styles/fonts.css` (`--font-apple-music`) for all UI text.
+
+- Global inheritance is set on `html` in `src/styles/index.css` — do not override with other font families in components.
+- Prefer Tailwind `font-sans` when a utility class is needed; it maps to the same stack via `@theme`.
+- Do not import Google Fonts or other third-party web fonts unless the user explicitly requests a change.
+- Icon fonts (e.g. SVG-only or icon components) are exempt; only change text typography.
