@@ -2,6 +2,7 @@
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppPlayerBar from '@/components/layout/AppPlayerBar.vue'
+import PlaylistPickerBackdrop from '@/components/layout/PlaylistPickerBackdrop.vue'
 import { RouterView } from 'vue-router'
 </script>
 
@@ -20,5 +21,7 @@ import { RouterView } from 'vue-router'
     </div>
 
     <AppPlayerBar />
+
+    <PlaylistPickerBackdrop />
   </div>
 </template>

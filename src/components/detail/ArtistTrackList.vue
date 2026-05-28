@@ -30,7 +30,7 @@ async function playTrack(index: number) {
 
 <template>
   <section class="artist-track-list px-10 pt-2">
-    <h2 v-if="showTitle" class="mb-4 text-2xl font-bold text-white">{{ title ?? '热门' }}</h2>
+    <h2 v-if="showTitle" class="mb-4 text-2xl font-bold text-white">{{ title ?? '热门歌曲' }}</h2>
 
     <div
       class="track-list-header mb-2 hidden grid-cols-[16px_4fr_3fr_minmax(56px,1fr)] gap-4 border-b border-[rgba(255,255,255,0.1)] px-2 pb-2 text-xs font-normal uppercase tracking-wide text-[#b3b3b3] md:grid"

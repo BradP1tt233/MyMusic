@@ -11,11 +11,36 @@ export {
 export { fetchLoginUserId } from './loginStatus'
 export { fetchFeaturedChartCards, fetchChartDetail } from './chartDetail'
 export { fetchFeaturedChartTracks, fetchChartListTracks } from './chartList'
-export { fetchArtistPageData, fetchArtistHotTracks } from './artist'
+export { fetchArtistPageData, fetchArtistHotTracks, fetchArtistSongs } from './artist'
 export {
   fetchPlaylistDetail,
   fetchPlaylistPageData,
   fetchPlaylistTracks,
   fetchPlaylistTracksForPlay,
 } from './playlist'
+export {
+  createRemotePlaylist,
+  deleteRemotePlaylist,
+  subscribeRemotePlaylist,
+  manipulatePlaylistTracks,
+  likeSong,
+} from './playlistMutations'
+export { fetchUserPlaylists, findLikedPlaylistId } from './userPlaylist'
+export {
+  fetchSongDetailMap,
+  attachSongDetailsToItems,
+  mapSongDetailToMediaItem,
+} from './songDetail'
 export { fetchQrKey, createQrCode, checkQrStatus } from './qrLogin'
+export {
+  fetchSearchDefaultKeyword,
+  fetchSearchHotKeywords,
+  fetchSearchSuggest,
+  fetchSearchSuggestPreview,
+  enrichSearchSuggestSongCovers,
+  fetchSearchSuggestDropdownItems,
+  fetchSearchMultimatch,
+  fetchSearchResults,
+  mapSearchSuggestResponse,
+  mapSearchPlaylistToMediaItem,
+} from './search'

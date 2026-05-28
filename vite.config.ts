@@ -44,7 +44,19 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           changeOrigin: true,
         },
-        '/artist': {
+        '/artist/detail': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/artist/desc': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/artist/album': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/artist/songs': {
           target: apiTarget,
           changeOrigin: true,
         },
@@ -57,6 +69,43 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         '/playlist/track': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/playlist/create': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/playlist/delete': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/playlist/subscribe': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/playlist/tracks': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/user/playlist': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/like': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
+        '/search': {
+          target: apiTarget,
+          changeOrigin: true,
+          bypass(req) {
+            if (req.headers.accept?.includes('text/html')) {
+              return '/index.html'
+            }
+          },
+        },
+        '/cloudsearch': {
           target: apiTarget,
           changeOrigin: true,
         },

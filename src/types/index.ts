@@ -1,5 +1,14 @@
 export type { Song } from './song'
 export type {
+  FetchSearchResultsOptions,
+  SearchCloudResponse,
+  SearchDefaultResponse,
+  SearchHotResponse,
+  SearchMultimatchResponse,
+  SearchPageData,
+  SearchSuggestResponse,
+} from './search'
+export type {
   DailyRecommendationDto,
   DailyRecommendationResponse,
   FetchDailyRecommendationsOptions,
@@ -34,5 +43,6 @@ export type {
   MediaItemType,
   DiscoverSection,
   LibraryPlaylist,
+  LibraryPlaylistKind,
   DetailEntity,
 } from './media'

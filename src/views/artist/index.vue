@@ -18,6 +18,10 @@ const loading = ref(true)
 
 const artistId = computed(() => route.params.id as string)
 
+const canPlayAll = computed(
+  () => Boolean(artist.value?.hotTracks.some((track) => Boolean(track.src))),
+)
+
 async function loadArtist(id: string) {
   loading.value = true
 
@@ -35,8 +39,8 @@ async function loadArtist(id: string) {
   }
 }
 
-async function playTracks(shuffle = false) {
-  if (!artist.value?.hotTracks.length) {
+async function playAllTracks(shuffle = false) {
+  if (!canPlayAll.value || !artist.value?.hotTracks.length) {
     return
   }
 
@@ -71,13 +75,15 @@ watch(artistId, (id) => {
       :subtitle="artist.subtitle"
       :cover="artist.cover"
       :identify-label="artist.identifyLabel"
-      @play="playTracks(false)"
-      @shuffle="playTracks(true)"
+      :play-all-disabled="!canPlayAll"
+      @play-all="playAllTracks(false)"
+      @shuffle="playAllTracks(true)"
     />
 
     <ArtistTrackList
       v-if="artist.hotTracks.length > 0"
       :tracks="artist.hotTracks"
+      title="热门歌曲"
       class="mt-8"
     />
 

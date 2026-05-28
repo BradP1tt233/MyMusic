@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import { useLibraryPlaylists } from '@/composables/useLibraryPlaylists'
+import { usePlaylistPicker, songToPickerTrack } from '@/composables/usePlaylistPicker'
 import { usePlayer } from '@/hooks/usePlayer'
+import { useAuthStore } from '@/stores/auth'
 
 const {
   currentSong,
@@ -16,14 +19,51 @@ const {
   togglePlay,
   toggleShuffle,
   toggleRepeatOne,
-  toggleLike,
   toggleMute,
   setMuted,
   seek,
   setVolume,
   next,
   prev,
+  store,
 } = usePlayer()
+
+const { isSongInLikedPlaylist, toggleLikedSong } = useLibraryPlaylists()
+const { togglePicker, isPickerActive } = usePlaylistPicker()
+const authStore = useAuthStore()
+const liking = ref(false)
+
+function handleTogglePicker() {
+  if (!currentSong.value) {
+    return
+  }
+
+  togglePicker(songToPickerTrack(currentSong.value))
+}
+
+watch(
+  currentSong,
+  (song) => {
+    store.liked = song ? isSongInLikedPlaylist(song.id) : false
+  },
+  { immediate: true },
+)
+
+async function handleToggleLike() {
+  if (!currentSong.value || liking.value) {
+    return
+  }
+
+  liking.value = true
+
+  try {
+    store.liked = await toggleLikedSong(currentSong.value, {
+      cookie: authStore.isLoggedIn ? authStore.cookie : undefined,
+    })
+  } finally {
+    liking.value = false
+  }
+}
 
 const isShuffleActive = computed(() => playMode.value === 'shuffle')
 const isRepeatOneActive = computed(() => playMode.value === 'repeat-one')
@@ -117,6 +157,7 @@ const repeatLabel = computed(() =>
     data-testid="now-playing-bar"
     aria-label="当前播放栏"
     class="player-bar shrink-0 bg-black"
+    :class="{ 'is-picker-mode': isPickerActive }"
   >
     <div
       data-testid="playback-progressbar"
@@ -196,12 +237,28 @@ const repeatLabel = computed(() =>
           :aria-label="liked ? '从“已点赞的歌曲”中删除' : '添加到“已点赞的歌曲”'"
           class="player-icon-btn shrink-0"
           :class="{ 'is-active': liked }"
-          :disabled="!currentSong"
-          @click="toggleLike"
+          :disabled="!currentSong || isPickerActive"
+          @click="handleToggleLike"
         >
           <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
             <path
               d="M8 14.5c-.1 0-.2-.03-.29-.09C7.61 14.31 1 9.34 1 5.02 1 2.79 2.79 1 4.98 1c1.25 0 2.45.58 3.02 1.5.57-.92 1.77-1.5 3.02-1.5 2.19 0 3.98 1.79 3.98 4.02 0 4.32-6.61 9.29-6.71 9.39-.09.06-.19.09-.29.09z"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          data-testid="control-button-add-to-playlist"
+          aria-label="添加到歌单"
+          class="player-icon-btn shrink-0"
+          :class="{ 'is-active': isPickerActive }"
+          :disabled="!currentSong"
+          @click="handleTogglePicker"
+        >
+          <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
+            <path
+              d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h7.8a.7.7 0 0 0 .7-.7V9.8H13a.7.7 0 0 0 0-1.4h-2.1V1.7a.7.7 0 0 0-.7-.7zm.7 1.4h5.6v10.6H3.4zm7.2 2.3a.7.7 0 0 1 .7.7v1.4H13a.7.7 0 0 1 0 1.4h-1.7v1.4a.7.7 0 0 1-1.4 0v-1.4H8.5a.7.7 0 0 1 0-1.4h1.4V5.4a.7.7 0 0 1 .7-.7z"
             />
           </svg>
         </button>
@@ -495,6 +552,21 @@ const repeatLabel = computed(() =>
 
 .player-bar-grid {
   grid-template-columns: minmax(180px, 30%) minmax(280px, 40%) minmax(180px, 30%);
+}
+
+.player-bar {
+  position: relative;
+}
+
+.player-bar.is-picker-mode .player-now-playing {
+  position: relative;
+  z-index: 55;
+}
+
+.player-bar.is-picker-mode .player-controls,
+.player-bar.is-picker-mode .player-extra {
+  pointer-events: none;
+  opacity: 0.35;
 }
 
 .player-icon-btn {

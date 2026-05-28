@@ -2,40 +2,45 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPlaylistPageData } from '@/api/playlist'
+import { attachSongDetailsToItems } from '@/api/songDetail'
+import { attachSongUrlsV1ToItems } from '@/api/songUrl'
 import ArtistTrackList from '@/components/detail/ArtistTrackList.vue'
 import PlaylistDetailHero from '@/components/detail/PlaylistDetailHero.vue'
 import { useLibraryPlaylists } from '@/composables/useLibraryPlaylists'
 import { usePlayer } from '@/hooks/usePlayer'
+import { useAuthStore } from '@/stores/auth'
 import { getPlaylistCatalogItem, mediaItemsToSongs } from '@/data/catalog'
+import { isRemotePlaylistId, resolveRemotePlaylistId } from '@/utils/libraryPlaylist'
 import type { PlaylistPageData } from '@/types/playlist'
+import type { MediaCardItem } from '@/types/media'
 
 const route = useRoute()
 const router = useRouter()
-const { playlists } = useLibraryPlaylists()
+const authStore = useAuthStore()
+const {
+  getPlaylistById,
+  buildLibraryPlaylistPage,
+  collectPlaylist,
+  isPlaylistInLibrary,
+} = useLibraryPlaylists()
 const { setPlayList, playAtIndex, store } = usePlayer()
 
 const playlist = ref<PlaylistPageData | null>(null)
 const loading = ref(true)
+const actionBusy = ref(false)
 
 const playlistId = computed(() => route.params.id as string)
 
-function buildLibraryPlaylistPage(id: string): PlaylistPageData | null {
-  const libraryItem = playlists.value.find((entry) => entry.id === id)
-  if (!libraryItem) {
-    return null
-  }
+const libraryItem = computed(() => getPlaylistById(playlistId.value))
 
-  return {
-    id: libraryItem.id,
-    name: libraryItem.title,
-    cover: libraryItem.cover,
-    description: libraryItem.description ?? libraryItem.subtitle,
-    creatorName: '你',
-    trackCount: 0,
-    subtitle: libraryItem.subtitle,
-    tracks: [],
-  }
-}
+const showCollect = computed(
+  () =>
+    !libraryItem.value &&
+    isRemotePlaylistId(playlistId.value) &&
+    Boolean(playlist.value),
+)
+
+const isCollected = computed(() => isPlaylistInLibrary(playlistId.value))
 
 function buildCatalogPlaylistPage(id: string): PlaylistPageData | null {
   const catalogItem = getPlaylistCatalogItem(id)
@@ -55,28 +60,79 @@ function buildCatalogPlaylistPage(id: string): PlaylistPageData | null {
   }
 }
 
+async function fetchRemotePlaylistPage(remoteId: string, libraryData?: PlaylistPageData | null) {
+  const apiData = await fetchPlaylistPageData(remoteId)
+  if (!apiData) {
+    return null
+  }
+
+  if (libraryData) {
+    return {
+      ...apiData,
+      id: libraryData.id,
+      name: libraryData.name,
+      description: libraryData.description,
+      subtitle: libraryData.subtitle,
+    }
+  }
+
+  return apiData
+}
+
+async function finalizePlaylistTracks(tracks: MediaCardItem[]) {
+  if (tracks.length === 0) {
+    return tracks
+  }
+
+  const withUrls = await attachSongUrlsV1ToItems(tracks)
+  return attachSongDetailsToItems(withUrls)
+}
+
+async function applyPlaylistPage(page: PlaylistPageData) {
+  const tracks = await finalizePlaylistTracks(page.tracks)
+
+  playlist.value = {
+    ...page,
+    tracks,
+    trackCount: tracks.length > 0 ? tracks.length : page.trackCount,
+  }
+  document.title = `${page.name} · myMusicPlayer`
+}
+
 async function loadPlaylist(id: string) {
   loading.value = true
 
   try {
-    const apiData = await fetchPlaylistPageData(id)
-    if (apiData) {
-      playlist.value = apiData
-      document.title = `${apiData.name} · myMusicPlayer`
+    const libraryData = buildLibraryPlaylistPage(id)
+    if (libraryData) {
+      const item = libraryItem.value
+      const remoteId = item ? resolveRemotePlaylistId(item) : undefined
+
+      if (
+        remoteId &&
+        libraryData.tracks.length === 0 &&
+        (item?.kind === 'collected' || item?.kind === 'created')
+      ) {
+        const apiData = await fetchRemotePlaylistPage(remoteId, libraryData)
+        if (apiData) {
+          await applyPlaylistPage(apiData)
+          return
+        }
+      }
+
+      await applyPlaylistPage(libraryData)
       return
     }
 
-    const libraryData = buildLibraryPlaylistPage(id)
-    if (libraryData) {
-      playlist.value = libraryData
-      document.title = `${libraryData.name} · myMusicPlayer`
+    const apiData = await fetchPlaylistPageData(id)
+    if (apiData) {
+      await applyPlaylistPage(apiData)
       return
     }
 
     const catalogData = buildCatalogPlaylistPage(id)
     if (catalogData) {
-      playlist.value = catalogData
-      document.title = `${catalogData.name} · myMusicPlayer`
+      await applyPlaylistPage(catalogData)
       return
     }
 
@@ -106,6 +162,61 @@ async function playTracks(shuffle = false) {
   await playAtIndex(0)
 }
 
+async function handleCollect() {
+  if (!playlist.value || actionBusy.value || isCollected.value) {
+    return
+  }
+
+  actionBusy.value = true
+
+  try {
+    const collected = await collectPlaylist(
+      {
+        id: playlist.value.id,
+        title: playlist.value.name,
+        subtitle: playlist.value.subtitle,
+        image: playlist.value.cover,
+        type: 'playlist',
+      },
+      {
+        cookie: authStore.isLoggedIn ? authStore.cookie : undefined,
+        sourcePlaylistId: playlist.value.id,
+      },
+    )
+
+    if (!collected) {
+      return
+    }
+
+    await router.push({ name: 'Playlist', params: { id: collected.id } })
+  } finally {
+    actionBusy.value = false
+  }
+}
+
+watch(
+  () => libraryItem.value?.tracks,
+  () => {
+    if (libraryItem.value) {
+      const page = buildLibraryPlaylistPage(playlistId.value)
+      if (page && playlist.value?.id === page.id) {
+        const current = playlist.value
+        void (async () => {
+          const tracks = await finalizePlaylistTracks(page.tracks)
+          playlist.value = {
+            ...current,
+            tracks,
+            subtitle: page.subtitle,
+            cover: page.cover,
+            trackCount: tracks.length,
+          }
+        })()
+      }
+    }
+  },
+  { deep: true },
+)
+
 onMounted(() => {
   void loadPlaylist(playlistId.value)
 })
@@ -122,8 +233,12 @@ watch(playlistId, (id) => {
       :subtitle="playlist.subtitle"
       :description="playlist.description"
       :cover="playlist.cover"
+      :show-collect="showCollect"
+      :is-collected="isCollected"
+      :action-busy="actionBusy"
       @play="playTracks(false)"
       @shuffle="playTracks(true)"
+      @collect="handleCollect"
     />
 
     <ArtistTrackList

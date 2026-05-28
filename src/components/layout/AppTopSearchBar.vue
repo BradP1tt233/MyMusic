@@ -1,34 +1,158 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { fetchSearchDefaultKeyword, fetchSearchSuggestPreview, enrichSearchSuggestSongCovers } from '@/api/search'
+import SearchSuggestDropdown from '@/components/search/SearchSuggestDropdown.vue'
+import type { MediaCardItem } from '@/types/media'
 
 const router = useRouter()
+const route = useRoute()
 const query = defineModel<string>({ default: '' })
 
 const isFocused = ref(false)
 const isHovered = ref(false)
+const defaultKeyword = ref('')
+const suggestLoading = ref(false)
+const suggestSongs = ref<MediaCardItem[]>([])
+const suggestArtists = ref<MediaCardItem[]>([])
+
+let suggestTimer: ReturnType<typeof setTimeout> | undefined
+let suggestRequestId = 0
 
 const showClear = computed(() => query.value.length > 0)
+const placeholder = computed(() => defaultKeyword.value || '想播放什么？')
+const showDropdown = computed(
+  () => isFocused.value && (query.value.trim().length > 0 || suggestLoading.value),
+)
 
 function focusInput() {
   isFocused.value = true
+
+  if (query.value.trim()) {
+    void loadSuggest(query.value)
+  }
 }
 
 function blurInput() {
-  isFocused.value = false
+  window.setTimeout(() => {
+    isFocused.value = false
+  }, 120)
 }
 
 function clearSearch() {
   query.value = ''
+  resetSuggest()
+}
+
+function resetSuggest() {
+  suggestSongs.value = []
+  suggestArtists.value = []
+}
+
+function navigateToSearch(keyword: string) {
+  const trimmed = keyword.trim()
+  if (!trimmed) {
+    router.push({ name: 'Search' })
+    return
+  }
+
+  query.value = trimmed
+  isFocused.value = false
+  router.push({
+    name: 'Search',
+    query: { q: trimmed },
+  })
 }
 
 function openSearch() {
-  router.push({ path: '/search', query: query.value ? { q: query.value } : {} })
+  navigateToSearch(query.value)
 }
+
+async function loadSuggest(keywords: string) {
+  const trimmed = keywords.trim()
+  if (!trimmed) {
+    resetSuggest()
+    suggestLoading.value = false
+    return
+  }
+
+  const requestId = ++suggestRequestId
+  suggestLoading.value = true
+
+  let preview: Awaited<ReturnType<typeof fetchSearchSuggestPreview>> = null
+
+  try {
+    preview = await fetchSearchSuggestPreview(trimmed)
+    if (requestId !== suggestRequestId) {
+      return
+    }
+
+    if (!preview) {
+      resetSuggest()
+      return
+    }
+
+    suggestSongs.value = preview.songs
+    suggestArtists.value = preview.artists
+  } finally {
+    if (requestId === suggestRequestId) {
+      suggestLoading.value = false
+    }
+  }
+
+  if (!preview?.songs.length || preview.songs.every((song) => Boolean(song.image))) {
+    return
+  }
+
+  void enrichSearchSuggestSongCovers(preview.songs).then((songs) => {
+    if (requestId !== suggestRequestId) {
+      return
+    }
+
+    suggestSongs.value = songs
+  })
+}
+
+function scheduleSuggest(keywords: string) {
+  if (suggestTimer !== undefined) {
+    clearTimeout(suggestTimer)
+  }
+
+  suggestTimer = setTimeout(() => {
+    suggestTimer = undefined
+    void loadSuggest(keywords)
+  }, 150)
+}
+
+watch(
+  query,
+  (value) => {
+    if (!isFocused.value) {
+      return
+    }
+
+    scheduleSuggest(value)
+  },
+)
+
+watch(
+  () => route.query.q,
+  (value) => {
+    if (route.name !== 'Search') {
+      return
+    }
+
+    query.value = String(value ?? '')
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  defaultKeyword.value = await fetchSearchDefaultKeyword()
+})
 </script>
 
 <template>
-  <!-- Spotify: form[role="search"][data-encore-id="formInputIcon"] -->
   <form
     role="search"
     data-encore-id="formInputIcon"
@@ -38,11 +162,9 @@ function openSearch() {
     @mouseleave="isHovered = false"
     @submit.prevent="openSearch"
   >
-    <!-- leading icon: div.e-10451-form-input-icon__icon--leading -->
     <div
       class="absolute top-1/2 left-0 z-[1] flex h-12 w-12 -translate-y-1/2 items-center justify-center"
     >
-      <!-- button[data-testid="search-icon"][aria-label="搜索"] -->
       <button
         type="button"
         tabindex="-1"
@@ -69,11 +191,10 @@ function openSearch() {
       </button>
     </div>
 
-    <!-- input wrapper: div.DW2tFcaSSAWw9twn -->
     <div class="relative h-12 w-full">
       <input
         v-model="query"
-        class="h-12 w-full rounded-full border-0 py-3 pr-[4.5rem] pl-12 text-base font-normal text-white outline-none transition-[box-shadow,background-color,color] duration-[220ms] ease-in placeholder:text-[#b3b3b3]"
+        class="h-12 w-full rounded-full border-0 py-3 pr-12 pl-12 text-base font-normal text-white outline-none transition-[box-shadow,background-color,color] duration-[220ms] ease-in placeholder:text-[#b3b3b3]"
         :class="[
           isFocused
             ? 'bg-[#2a2a2a] shadow-[inset_0_0_0_2px_#ffffff]'
@@ -85,25 +206,33 @@ function openSearch() {
         role="combobox"
         aria-owns="search-dropdown"
         aria-controls="search-dropdown"
-        :aria-expanded="isFocused ? 'true' : 'false'"
+        :aria-expanded="showDropdown ? 'true' : 'false'"
         data-testid="search-input"
         aria-label="想播放什么？"
         data-top-bar-search="true"
-        type="search"
+        type="text"
+        autocomplete="off"
         spellcheck="false"
-        placeholder="想播放什么？"
+        :placeholder="placeholder"
         @focus="focusInput"
         @blur="blurInput"
         @keydown.enter="openSearch"
       />
     </div>
 
-    <!-- trailing icons: div.e-10451-form-input-icon__icon--trailing -->
+    <SearchSuggestDropdown
+      :open="showDropdown"
+      :songs="suggestSongs"
+      :artists="suggestArtists"
+      :loading="suggestLoading"
+      @select-item="navigateToSearch"
+    />
+
     <div
-      class="absolute top-1/2 right-0 z-[1] flex h-12 -translate-y-1/2 items-center gap-1 pr-3"
+      v-show="showClear"
+      class="absolute top-1/2 right-0 z-[1] flex h-12 -translate-y-1/2 items-center pr-3"
     >
       <button
-        v-show="showClear"
         type="button"
         data-testid="clear-button"
         data-encore-id="buttonTertiary"
@@ -126,36 +255,6 @@ function openSearch() {
           </svg>
         </span>
       </button>
-
-      <div class="flex items-center">
-        <button
-          type="button"
-          data-testid="browse-button"
-          data-encore-id="buttonTertiary"
-          aria-label="浏览"
-          class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-[#b3b3b3] transition-[color,transform] duration-150 ease-[cubic-bezier(0.3,0,0,1)] hover:scale-[1.04] hover:text-white focus-visible:outline-none"
-          @click="router.push('/discover')"
-        >
-          <span aria-hidden="true" class="flex h-6 w-6 items-center justify-center">
-            <svg
-              data-encore-id="icon"
-              role="img"
-              aria-hidden="true"
-              class="h-6 w-6"
-              viewBox="0 0 24 24"
-            >
-              <path
-                fill="currentColor"
-                d="M15 15.5c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2"
-              />
-              <path
-                fill="currentColor"
-                d="M1.513 9.37A1 1 0 0 1 2.291 9h19.418a1 1 0 0 1 .979 1.208l-2.339 11a1 1 0 0 1-.978.792H4.63a1 1 0 0 1-.978-.792l-2.339-11a1 1 0 0 1 .201-.837zM3.525 11l1.913 9h13.123l1.913-9zM4 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v4h-2V3H6v3H4z"
-              />
-            </svg>
-          </span>
-        </button>
-      </div>
     </div>
   </form>
 </template>

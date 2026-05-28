@@ -3,19 +3,26 @@ import { resolveRequestUrl, withTimestamp } from '@/api/url'
 import { mapTopArtistToMediaItem } from '@/api/topArtists'
 import { attachSongUrlsToItems } from '@/api/songUrl'
 import type { MediaCardItem } from '@/types/media'
-import type {
-  ArtistAlbumDto,
-  ArtistAlbumResponse,
-  ArtistDescResponse,
-  ArtistDetailResponse,
-  ArtistInfoDto,
-  ArtistPageData,
-  ArtistSongDto,
-  ArtistsResponse,
-  SimiArtistResponse,
+import {
+  ARTIST_SONGS_DEFAULT_LIMIT,
+  type ArtistAlbumDto,
+  type ArtistAlbumResponse,
+  type ArtistDescResponse,
+  type ArtistDetailResponse,
+  type ArtistInfoDto,
+  type ArtistPageData,
+  type ArtistSongDto,
+  type ArtistSongsResponse,
+  type ArtistsResponse,
+  type FetchArtistSongsOptions,
+  type SimiArtistResponse,
 } from '@/types/artist'
 
 const DEFAULT_ALBUM_LIMIT = 20
+
+function extractArtistSongs(payload: ArtistSongsResponse) {
+  return payload.songs ?? []
+}
 
 function buildArtistUrl(path: string, id: string, extra?: Record<string, string>) {
   const params = new URLSearchParams({ id, ...extra })
@@ -148,10 +155,24 @@ function buildArtistPageData(
   }
 }
 
-export async function fetchArtistHotTracks(id: string): Promise<MediaCardItem[]> {
+export async function fetchArtistSongs(
+  id: string,
+  options: FetchArtistSongsOptions = {},
+): Promise<MediaCardItem[]> {
+  const limit = options.limit ?? ARTIST_SONGS_DEFAULT_LIMIT
+  const offset = options.offset ?? 0
+  const order = options.order ?? 'hot'
+
   try {
-    const payload = await requestJson<ArtistsResponse>(buildArtistUrl('/artists', id))
-    const mapped = (payload.hotSongs ?? [])
+    const payload = await requestJson<ArtistSongsResponse>(
+      buildArtistUrl('/artist/songs', id, {
+        order,
+        limit: String(limit),
+        offset: String(offset),
+      }),
+    )
+
+    const mapped = extractArtistSongs(payload)
       .map(mapArtistSongToMediaItem)
       .filter((item): item is MediaCardItem => item !== null)
 
@@ -163,6 +184,10 @@ export async function fetchArtistHotTracks(id: string): Promise<MediaCardItem[]>
   } catch {
     return []
   }
+}
+
+export async function fetchArtistHotTracks(id: string): Promise<MediaCardItem[]> {
+  return fetchArtistSongs(id, { order: 'hot', limit: ARTIST_SONGS_DEFAULT_LIMIT, offset: 0 })
 }
 
 export async function fetchArtistPageData(id: string): Promise<ArtistPageData | null> {
@@ -180,11 +205,11 @@ export async function fetchArtistPageData(id: string): Promise<ArtistPageData | 
       requestJson<SimiArtistResponse>(buildArtistUrl('/simi/artist', id)),
     ])
 
-    const hotTracks = await attachSongUrlsToItems(
-      (artistsRes.hotSongs ?? [])
-        .map(mapArtistSongToMediaItem)
-        .filter((item): item is MediaCardItem => item !== null),
-    )
+    const hotTracks = await fetchArtistSongs(id, {
+      order: 'hot',
+      limit: ARTIST_SONGS_DEFAULT_LIMIT,
+      offset: 0,
+    })
 
     return buildArtistPageData(id, artistsRes, detailRes, descRes, albumRes, simiRes, hotTracks)
   } catch {

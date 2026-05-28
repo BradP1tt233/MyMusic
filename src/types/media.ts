@@ -25,13 +25,23 @@ export type DiscoverSection = {
   showCollectionLink?: boolean
 }
 
+export type LibraryPlaylistKind = 'liked' | 'created' | 'collected'
+
 export type LibraryPlaylist = {
   id: string
   title: string
   subtitle: string
   cover: string
+  kind: LibraryPlaylistKind
   pinned?: boolean
   description?: string
+  /** 歌单内歌曲，封面默认取第一首 */
+  tracks?: MediaCardItem[]
+  /** 收藏歌单对应的远端歌单 ID（可选） */
+  sourcePlaylistId?: string
+  /** 网易云歌单 ID，用于 create/delete/tracks 等接口 */
+  remotePlaylistId?: string
+  createdAt?: number
 }
 
 export type DetailEntity = {

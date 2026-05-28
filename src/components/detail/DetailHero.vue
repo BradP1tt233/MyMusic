@@ -7,6 +7,12 @@ defineProps<{
   typeLabel: string
   coverVariant?: 'square' | 'circle'
   coverIsGradient?: boolean
+  showPlayAll?: boolean
+  playAllDisabled?: boolean
+}>()
+
+defineEmits<{
+  'play-all': []
 }>()
 </script>
 
@@ -40,6 +46,24 @@ defineProps<{
         <p v-if="description && description !== subtitle" class="mt-2 text-sm text-[#b3b3b3]">
           {{ description }}
         </p>
+
+        <div v-if="showPlayAll" class="mt-6 flex items-center gap-6">
+          <button
+            type="button"
+            data-testid="detail-play-all-button"
+            aria-label="播放全部"
+            :disabled="playAllDisabled"
+            class="flex h-14 cursor-pointer items-center gap-2 rounded-full border-0 bg-[#1ed760] pl-5 pr-6 text-base font-bold text-black transition-transform duration-[220ms] ease-in hover:scale-[1.04] active:scale-[0.96] focus-visible:outline-none disabled:cursor-default disabled:opacity-50 disabled:hover:scale-100"
+            @click="$emit('play-all')"
+          >
+            <svg viewBox="0 0 16 16" class="h-5 w-5 shrink-0 fill-current" aria-hidden="true">
+              <path
+                d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288z"
+              />
+            </svg>
+            播放全部
+          </button>
+        </div>
       </div>
     </div>
   </header>

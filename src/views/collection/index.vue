@@ -17,11 +17,13 @@ import {
   RECOMMENDED_PLAYLISTS_SLUG,
   RECOMMENDED_PLAYLISTS_TITLE,
 } from '@/constants/discover'
-import { getDiscoverSection } from '@/data/catalog'
+import { getDiscoverSection, mediaItemsToSongs } from '@/data/catalog'
+import { usePlayer } from '@/hooks/usePlayer'
 
 const route = useRoute()
 const router = useRouter()
 const { allTracks, load } = useDailyRecommendations()
+const { setPlayList, playAtIndex, store } = usePlayer()
 const { allArtists, load: loadArtists } = useTopArtists()
 const { allPlaylists, load: loadPlaylists } = useRecommendedPlaylists()
 const { allCharts, load: loadCharts } = useFeaturedCharts()
@@ -39,6 +41,10 @@ const isRecommendedPlaylists = computed(
 )
 
 const isFeaturedCharts = computed(() => route.params.slug === FEATURED_CHARTS_SLUG)
+
+const canPlayAllDaily = computed(
+  () => isDailyRecommendations.value && allTracks.value.some((item) => Boolean(item.src)),
+)
 
 const useLazyImages = computed(
   () =>
@@ -157,6 +163,24 @@ watchEffect(() => {
 
   document.title = `${section.value.title} · myMusicPlayer`
 })
+
+async function playAllDaily() {
+  if (!canPlayAllDaily.value) {
+    return
+  }
+
+  const songs = mediaItemsToSongs(allTracks.value)
+  if (songs.length === 0) {
+    return
+  }
+
+  if (store.playMode === 'shuffle') {
+    store.toggleShuffle()
+  }
+
+  setPlayList(songs, 0)
+  await playAtIndex(0)
+}
 </script>
 
 <template>
@@ -168,6 +192,9 @@ watchEffect(() => {
       :cover="('heroCover' in section ? section.heroCover : undefined) ?? section.items[0]?.image ?? ''"
       :type-label="isDailyRecommendations ? DAILY_RECOMMENDATIONS_TITLE : section.title"
       :cover-variant="'variant' in section && section.variant === 'circle' ? 'circle' : 'square'"
+      :show-play-all="isDailyRecommendations"
+      :play-all-disabled="!canPlayAllDaily"
+      @play-all="playAllDaily"
     />
 
     <section class="px-10 pt-2">

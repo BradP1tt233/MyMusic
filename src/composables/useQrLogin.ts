@@ -1,5 +1,6 @@
 import { onUnmounted, ref } from 'vue'
 import { checkQrStatus, createQrCode, fetchQrKey } from '@/api/qrLogin'
+import { useLibraryPlaylists } from '@/composables/useLibraryPlaylists'
 import { useAuthStore } from '@/stores/auth'
 
 export type QrLoginPhase = 'idle' | 'loading' | 'waiting' | 'confirming' | 'expired' | 'success' | 'error'
@@ -8,6 +9,7 @@ const POLL_INTERVAL_MS = 2000
 
 export function useQrLogin() {
   const authStore = useAuthStore()
+  const { syncFromRemoteUserPlaylists } = useLibraryPlaylists()
 
   const phase = ref<QrLoginPhase>('idle')
   const qrImage = ref('')
@@ -73,7 +75,10 @@ export function useQrLogin() {
         }
 
         authStore.setCookie(result.cookie)
-        void authStore.refreshUserProfile()
+        const userId = await authStore.refreshUserProfile()
+        if (userId != null) {
+          await syncFromRemoteUserPlaylists(result.cookie, userId)
+        }
         phase.value = 'success'
         statusMessage.value = '登录成功'
         return

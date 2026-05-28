@@ -88,6 +88,23 @@ export type FetchArtistAlbumsOptions = {
   offset?: number
 }
 
+export type ArtistSongsOrder = 'hot' | 'time'
+
+export const ARTIST_SONGS_DEFAULT_LIMIT = 50
+
+export type FetchArtistSongsOptions = {
+  order?: ArtistSongsOrder
+  limit?: number
+  offset?: number
+}
+
+export type ArtistSongsResponse = {
+  code?: number
+  songs?: ArtistSongDto[]
+  more?: boolean
+  songCount?: number
+}
+
 export type ArtistPageData = {
   id: string
   name: string

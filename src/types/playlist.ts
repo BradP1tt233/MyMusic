@@ -48,3 +48,37 @@ export type PlaylistPageData = {
   subtitle: string
   tracks: MediaCardItem[]
 }
+
+export type PlaylistMutationResponse = {
+  code?: number
+  message?: string
+}
+
+export type PlaylistCreateResponse = PlaylistMutationResponse & {
+  id?: number | string
+  playlist?: {
+    id?: number | string
+    name?: string
+    coverImgUrl?: string
+  }
+}
+
+export type LikeSongResponse = PlaylistMutationResponse
+
+export type UserPlaylistDto = {
+  id?: number | string
+  name?: string
+  coverImgUrl?: string
+  trackCount?: number
+  specialType?: number
+  subscribed?: boolean
+  creator?: {
+    userId?: number
+    nickname?: string
+  }
+}
+
+export type UserPlaylistResponse = {
+  code?: number
+  playlist?: UserPlaylistDto[]
+}

@@ -254,18 +254,24 @@ export const discoverSections: DiscoverSection[] = [
 export const defaultLibraryPlaylists: LibraryPlaylist[] = [
   {
     id: 'liked',
+    kind: 'liked',
     title: '已点赞的歌曲',
-    subtitle: '歌单 • 1 首歌曲',
+    subtitle: '喜爱的歌曲 • 0 首歌曲',
     cover: 'linear-gradient(135deg, #450af5 0%, #8e7ee7 50%, #c4efd9 100%)',
     pinned: true,
     description: '你点赞的所有歌曲。',
+    tracks: [],
+    createdAt: 0,
   },
   {
-    id: 'pl-2',
-    title: '我的 #2 歌单',
-    subtitle: '歌单 • bradpitt',
-    cover: 'linear-gradient(135deg, #1f1f1f 0%, #535353 100%)',
-    description: 'bradpitt 创建的歌单。',
+    id: 'pl-collected-demo',
+    kind: 'collected',
+    title: '我的收藏精选',
+    subtitle: '收藏的歌单 • 0 首歌曲',
+    cover: 'linear-gradient(135deg, #1e3264 0%, #3d5a80 100%)',
+    description: '从发现页收藏的歌单。',
+    tracks: [],
+    createdAt: 1,
   },
 ]
 
